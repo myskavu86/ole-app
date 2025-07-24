@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App with Hurricane Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      transition: background-color 0.5s, background-image 0.5s;
+    }
+    .header {
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      color: white;
+      padding: 20px 0;
+      border-bottom: 5px solid #ffffff33;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .input-container {
+      margin: 20px auto;
+      padding: 20px;
+      background: linear-gradient(to right, #ff9a9e, #fad0c4);
+      border-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      display: inline-block;
+    }
+    input[type="text"] {
+      width: 200px;
+      padding: 10px;
+      margin: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #weather {
+      margin-top: 20px;
+      color: white;
+      text-shadow: 1px 1px 2px black;
+    }
+    #hurricane-tracker {
+      margin-top: 20px;
+      padding: 20px;
+      background: linear-gradient(to right, #ffecd2, #fcb69f);
+      border-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      color: black;
+      position: relative;
+    }
+    #hurricane-tracker svg {
+      width: 100%;
+      height: auto;
+      max-width: 600px;
+      margin: 0 auto;
+      display: block;
+    }
+    #hurricane-info {
+      margin-top: 20px;
+      font-size: 1.2rem;
+    }
+    #chart-container {
+      width: 80%;
+      margin: 20px auto;
+    }
+    canvas {
+      background: white;
+      border-radius: 10px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="header"><h1>Weather App with Hurricane Tracker</h1></div>
+  <div class="input-container">
+    <input type="text" id="city" placeholder="Enter city name">
+    <button onclick="getWeather()">Get Weather</button>
+  </div>
+  <div id="weather"></div>
+  <div id="chart-container"><canvas id="temperatureChart"></canvas></div>
+  <div id="hurricane-tracker">
+    <h2>Hurricane Tracker</h2>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500">
+      <rect width="1000" height="500" fill="#87CEEB" />
+      <path d="M200,300 Q400,100 600,300 T1000,300" fill="#228B22" />
+      <circle cx="500" cy="250" r="5" fill="red" />
+      <text x="510" y="260" font-size="12" fill="black">Hurricane</text>
+    </svg>
+    <p id="hurricane-info">No hurricane data available.</p>
+  </div>
+  <script>
+    const apiKey = 'f8d8d1e5dc5910cf1f718e086d4e8eca';
+    let temperatureChart;
+    function getWeather() {
+      const city = document.getElementById('city').value;
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+      fetch(weatherUrl)
+        .then(res => res.json())
+        .then(data => {
+          displayWeather(data);
+          getForecast(city);
+          changeBackground(data.weather[0].main);
+          trackHurricane(city);
+        })
+        .catch(console.error);
+    }
+    function displayWeather(data) {
+      const weather = document.getElementById('weather');
+      if (data.cod === '404') {
+        weather.innerHTML = `<h2>City not found</h2>`;
+      } else {
+        const c = data.main.temp;
+        const f = (c * 9/5) + 32;
+        const emoji = getWeatherEmoji(data.weather[0].main);
+        const rain = data.rain ? `${data.rain['1h']} mm` : 'No rain';
+        const wind = `${data.wind.speed} m/s`;
+        weather.innerHTML = `<h2>${data.name}, ${data.sys.country}</h2>
+        <h3>${emoji} ${data.weather[0].main}</h3>
+        <p>Temperature: ${c}°C / ${f.toFixed(1)}°F</p>
+        <p>Humidity: ${data.main.humidity}%</p>
+        <p>Rainfall: ${rain}</p>
+        <p>Wind Speed: ${wind}</p>`;
+      }
+    }
+    function getForecast(city) {
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+      fetch(forecastUrl).then(res => res.json()).then(displayForecast).catch(console.error);
+    }
+    function displayForecast(data) {
+      if (temperatureChart) temperatureChart.destroy();
+      const dailyData = {};
+      data.list.forEach(item => {
+        const date = item.dt_txt.split(' ')[0];
+        dailyData[date] = dailyData[date] || [];
+        dailyData[date].push(item.main.temp);
+      });
+      const labels = [], tempsC = [], tempsF = [];
+      for (const date in dailyData) {
+        labels.push(date);
+        const avgC = dailyData[date].reduce((a, b) => a + b) / dailyData[date].length;
+        tempsC.push(avgC);
+        tempsF.push((avgC * 9/5) + 32);
+      }
+      const ctx = document.getElementById('temperatureChart').getContext('2d');
+      temperatureChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Avg Temp (°C)', data: tempsC, backgroundColor: 'rgba(75,192,192,0.2)', borderColor: 'rgba(75,192,192,1)', borderWidth: 2 },
+            { label: 'Avg Temp (°F)', data: tempsF, backgroundColor: 'rgba(255,99,132,0.2)', borderColor: 'rgba(255,99,132,1)', borderWidth: 2 }
+          ]
+        },
+        options: {
+          scales: {
+            x: { title: { display: true, text: 'Date' } },
+            y: { title: { display: true, text: 'Temperature' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+    function trackHurricane(city) {
+      const data = {
+        "Miami": "Hurricane Elsa is approaching with wind speeds of 120 km/h.",
+        "New York": "No hurricane activity detected.",
+        "Houston": "Hurricane Delta is 200 km away with wind speeds of 150 km/h."
+      };
+      document.getElementById('hurricane-info').innerText = data[city] || "No hurricane data available for this city.";
+    }
+    function changeBackground(weather) {
+      const body = document.body;
+      switch (weather.toLowerCase()) {
+        case 'clear':
+          body.style.backgroundColor = '#87CEEB';
+          body.style.backgroundImage = 'linear-gradient(to bottom, #87CEEB, #FFD700)';
+          break;
+        case 'clouds':
+          body.style.backgroundColor = '#B0C4DE';
+          body.style.backgroundImage = 'linear-gradient(to bottom, #B0C4DE, #778899)';
+          break;
+        case 'rain':
+          body.style.backgroundColor = '#4A4A4A';
+          body.style.backgroundImage = 'linear-gradient(to bottom, #4A4A4A, #000000)';
+          break;
+        case 'snow':
+          body.style.backgroundColor = '#FFFFFF';
+          body.style.backgroundImage = 'linear-gradient(to bottom, #FFFFFF, #D3D3D3)';
+          break;
+        case 'thunderstorm':
+          body.style.backgroundColor = '#2F4F4F';
+          body.style.backgroundImage = 'linear-gradient(to bottom, #2F4F4F, #000000)';
+          break;
+        default:
+          body.style.backgroundColor = '#FFFFFF';
+          body.style.backgroundImage = 'none';
+          break;
+      }
+    }
+    function getWeatherEmoji(weather) {
+      switch (weather.toLowerCase()) {
+        case 'clear': return '☀️';
+        case 'clouds': return '⛅';
+        case 'rain': return '🌧️';
+        case 'snow': return '❄️';
+        case 'thunderstorm': return '⛈️';
+        case 'drizzle': return '🌦️';
+        case 'mist':
+        case 'fog': return '🌫️';
+        default: return '';
+      }
+    }
+  </script>
+</body>
+</html>
