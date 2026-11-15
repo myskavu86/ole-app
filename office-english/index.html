@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiếng Anh công sở: bản thử</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Một cột kiểu widget điện thoại, một giao diện tối duy nhất giống mockup */
+  --bg: #0E1D24;
+  --card: #1B2F38;
+  --card-2: #24404B;
+  --line: #3B5661;
+  --text: #F2F5F4;
+  --muted: #A9BBC0;
+  --soft: #C5D2D6;
+  --accent: #F4B740;
+  --accent-ink: #1A1405;
+  --odd-bg: #3A3212;
+  --font: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.45; }
+main { max-width: 460px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
+.sub { margin: 0; color: var(--muted); font-size: 13px; }
+button { font-family: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 22px; background: transparent; color: var(--text); font-size: 14px; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: var(--card); border-radius: 14px; padding: 4px; }
+.tab { min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--soft); font-size: 13px; font-weight: 600; }
+.tab[aria-selected="true"] { background: var(--card-2); color: var(--accent); }
+.card { background: var(--card); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .6px; color: var(--accent); text-transform: uppercase; }
+.count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.from { font-size: 13px; color: var(--muted); }
+.quote { font-size: 20px; font-weight: 600; line-height: 1.3; margin: 0; }
+.context { font-size: 17px; font-weight: 600; line-height: 1.35; margin: 0; }
+.primary { min-height: 48px; border: 0; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-size: 15px; font-weight: 600; padding: 0 14px; }
+.ghost { min-height: 48px; border: 1px solid var(--accent); border-radius: 14px; background: transparent; color: var(--accent); font-size: 15px; font-weight: 600; padding: 0 14px; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.ans { background: var(--card-2); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.tag { font-size: 12px; font-weight: 600; color: var(--accent); }
+.en { font-size: 15px; font-weight: 500; }
+.note { font-size: 12px; color: var(--soft); }
+.ans-actions { display: flex; gap: 8px; margin-top: 4px; }
+.mini { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--text); font-size: 13px; font-weight: 500; }
+.mini[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.opt { min-height: 52px; text-align: left; padding: 10px 14px; border: 2px solid var(--line); border-radius: 14px; background: var(--card-2); color: var(--text); font-size: 15px; font-weight: 500; display: flex; flex-direction: column; gap: 4px; }
+.opt.is-odd { border-color: var(--accent); background: var(--odd-bg); }
+.opt.is-picked { border-color: var(--muted); }
+.verdict { font-size: 14px; font-weight: 700; }
+.steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.step { height: 6px; border-radius: 3px; background: var(--line); }
+.step.done { background: var(--accent); }
+.step.now { background: var(--text); }
+.recap { background: var(--card-2); border-radius: 14px; padding: 12px 14px; font-size: 13px; color: var(--soft); }
+.empty { color: var(--soft); font-size: 14px; margin: 0; }
+.saved h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.saved { display: flex; flex-direction: column; gap: 8px; }
+.saved-item { background: var(--card); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+footer { color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) { .card { transition: background-color .2s; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Tiếng Anh công sở</h1>
+    <p class="sub">Bản thử nội dung. Mỗi thẻ mô phỏng một lần chạm vào widget.</p>
+  </header>
+
+  <div class="row" id="packs" role="group" aria-label="Chọn ngành"></div>
+
+  <div class="tabs" role="tablist" aria-label="Dạng nội dung">
+    <button class="tab" role="tab" data-mode="qa" id="tab-qa">Tình huống</button>
+    <button class="tab" role="tab" data-mode="odd" id="tab-odd">Câu nghe kỳ</button>
+    <button class="tab" role="tab" data-mode="story" id="tab-story">Chuỗi truyện</button>
+  </div>
+
+  <section class="card" id="card" aria-live="polite"></section>
+
+  <section class="saved" id="saved"></section>
+
+  <footer>Nội dung là bản nháp, chưa qua người duyệt. Câu đã lưu chỉ nằm trên máy này.</footer>
+</main>
+
+<script src="content.js"></script>
+<script>
+(function () {
+  var C = window.CONTENT;
+  var state = { pack: 'chung', mode: 'qa', idx: 0, revealed: false, picked: null, ep: 0 };
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem('oe_saved') || '[]'); } catch (e) { saved = []; }
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function persist() { try { localStorage.setItem('oe_saved', JSON.stringify(saved)); } catch (e) {} }
+  function packName(id) { for (var i = 0; i < C.packs.length; i++) if (C.packs[i].id === id) return C.packs[i].name; return id; }
+
+  // Tình huống của gói ngành gồm cả gói chung, để ngành nào cũng có đủ nội dung
+  function pool() {
+    return C.items.filter(function (it) {
+      if (it.type !== state.mode) return false;
+      if (state.mode === 'odd') return true;
+      if (state.mode === 'story') return it.pack === state.pack;
+      return it.pack === state.pack || it.pack === 'chung';
+    }).sort(function (a, b) { return (a.pack === state.pack ? 0 : 1) - (b.pack === state.pack ? 0 : 1); });
+  }
+
+  function answersHtml(answers) {
+    return '<div class="list">' + answers.map(function (a) {
+      var on = saved.indexOf(a.en) !== -1;
+      return '<div class="ans"><div class="tag">' + esc(a.tag) + '</div><div class="en">' + esc(a.en) + '</div><div class="note">' + esc(a.note) + '</div>' +
+        '<div class="ans-actions"><button class="mini" data-speak="' + esc(a.en) + '">Nghe</button>' +
+        '<button class="mini" data-save="' + esc(a.en) + '" aria-pressed="' + on + '">' + (on ? 'Đã lưu' : 'Lưu câu này') + '</button></div></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderQa(items) {
+    var it = items[state.idx % items.length];
+    var h = '<div class="head"><div class="eyebrow">' + esc(packName(it.pack)) + ' · ' + esc(it.group) + '</div><div class="count">' + (state.idx % items.length + 1) + ' / ' + items.length + '</div></div>' +
+      '<div class="from">' + esc(it.from) + '</div><p class="quote">“' + esc(it.quote) + '”</p>';
+    if (!state.revealed) h += '<button class="primary" data-act="reveal">Bạn sẽ trả lời thế nào? Chạm để xem</button>';
+    else h += answersHtml(it.answers) + '<button class="ghost" data-act="next">Tình huống khác</button>';
+    return h;
+  }
+
+  function renderOdd(items) {
+    var it = items[state.idx % items.length];
+    var answered = state.picked !== null;
+    var h = '<div class="head"><div class="eyebrow">Câu nào nghe kỳ?</div><div class="count">' + (state.idx % items.length + 1) + ' / ' + items.length + '</div></div>' +
+      '<p class="context">' + esc(it.context) + '</p><div class="list">' +
+      it.texts.map(function (t, k) {
+        var cls = 'opt' + (answered && k === it.odd ? ' is-odd' : '') + (answered && k === state.picked && k !== it.odd ? ' is-picked' : '');
+        return '<button class="' + cls + '" data-pick="' + k + '"' + (answered ? ' disabled' : '') + '>' +
+          (answered && k === it.odd ? '<span class="tag">Câu nghe kỳ</span>' : '') + '<span>' + esc(t) + '</span></button>';
+      }).join('') + '</div>';
+    if (!answered) h += '<div class="from">Chạm vào câu bạn thấy không tự nhiên.</div>';
+    else h += '<div class="ans"><div class="verdict">' + (state.picked === it.odd ? 'Bạn chọn đúng.' : 'Chưa đúng, câu nghe kỳ là câu được đánh dấu.') + '</div><div class="note">' + esc(it.why) + '</div></div>' +
+      '<button class="primary" data-act="next">Câu tiếp theo</button>';
+    return h;
+  }
+
+  function renderStory(items) {
+    if (!items.length) return '<div class="eyebrow">Chuỗi truyện</div><p class="empty">Gói ' + esc(packName(state.pack)) + ' chưa có chuỗi truyện. Bản thử hiện chỉ có một truyện ở gói Xuất nhập khẩu.</p>';
+    var st = items[0], n = st.episodes.length, ep = st.episodes[state.ep % n], cur = state.ep % n;
+    var steps = st.episodes.map(function (_, k) { return '<div class="step' + (k < cur ? ' done' : k === cur ? ' now' : '') + '"></div>'; }).join('');
+    var h = '<div class="head"><div class="eyebrow">Chuỗi truyện · Tập ' + (cur + 1) + ' / ' + n + '</div><div class="count">' + esc(ep.day) + '</div></div>' +
+      '<p class="context">' + esc(st.title) + '</p><div class="steps" role="img" aria-label="Đang ở tập ' + (cur + 1) + ' trên ' + n + '">' + steps + '</div>' +
+      '<div class="recap">' + esc(ep.recap) + '</div><div class="from">' + esc(ep.from) + '</div><p class="quote">“' + esc(ep.quote) + '”</p>';
+    if (!state.revealed) h += '<button class="primary" data-act="reveal">Bạn mở lời thế nào? Chạm để xem</button>';
+    else h += answersHtml(ep.answers) + '<button class="ghost" data-act="nextep">' + (cur + 1 < n ? 'Sang tập ' + (cur + 2) : 'Xem lại từ tập 1') + '</button>';
+    return h;
+  }
+
+  function render() {
+    document.getElementById('packs').innerHTML = C.packs.map(function (p) {
+      return '<button class="chip" data-pack="' + p.id + '" aria-pressed="' + (p.id === state.pack) + '">' + esc(p.name) + '</button>';
+    }).join('');
+    ['qa', 'odd', 'story'].forEach(function (m) { document.getElementById('tab-' + m).setAttribute('aria-selected', String(m === state.mode)); });
+    var items = pool();
+    document.getElementById('card').innerHTML = state.mode === 'qa' ? renderQa(items) : state.mode === 'odd' ? renderOdd(items) : renderStory(items);
+    document.getElementById('saved').innerHTML = saved.length
+      ? '<h2>Câu đã lưu (' + saved.length + ')</h2>' + saved.map(function (s) { return '<div class="saved-item">' + esc(s) + '</div>'; }).join('')
+      : '';
+  }
+
+  function reset() { state.idx = 0; state.revealed = false; state.picked = null; state.ep = 0; }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.pack) { state.pack = t.dataset.pack; reset(); }
+    else if (t.dataset.mode) { state.mode = t.dataset.mode; reset(); }
+    else if (t.dataset.act === 'reveal') state.revealed = true;
+    else if (t.dataset.act === 'next') { state.idx++; state.revealed = false; state.picked = null; }
+    else if (t.dataset.act === 'nextep') { state.ep++; state.revealed = false; }
+    else if (t.dataset.pick !== undefined) state.picked = Number(t.dataset.pick);
+    else if (t.dataset.save) { var i = saved.indexOf(t.dataset.save); if (i === -1) saved.push(t.dataset.save); else saved.splice(i, 1); persist(); }
+    else if (t.dataset.speak) {
+      try { var u = new SpeechSynthesisUtterance(t.dataset.speak); u.lang = 'en-US'; u.rate = 0.9; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (err) {}
+      return;
+    } else return;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
