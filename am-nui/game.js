@@ -3,7 +3,8 @@ import { createWorld, BELL_T } from "./world.js";
 const STORE_KEY = "am-nui-v2";
 const MIN_ANSWER = 40; // số ký tự tối thiểu cho câu trả lời đầu
 const MIN_REPLY = 20;  // và cho câu đáp lại thầy
-const LISTEN_SECONDS = 7;
+const STILL_SECONDS = 24; // ba hơi thở, mỗi hơi 8 giây (4 hít, 4 thở)
+const BREATH_SECONDS = 8;
 
 // Ba cách hành xử, không cách nào được chấm là đúng. Mỗi cách cho một màu lửa.
 const STYLES = {
@@ -155,13 +156,38 @@ function strikeBell() {
   rung = true;
   setMode("listen");
   setAction(null);
-  hintEl.innerHTML = '<span class="breathing"></span>Đứng yên, nghe cho hết tiếng chuông.';
-  setTimeout(() => {
+  hint("");
+  stillness(() => {
     world.focus = null;
     world.maxT = 1;
     setMode("walk");
     hint("Đường lên am đã mở.");
-  }, LISTEN_SECONDS * 1000);
+  });
+}
+
+// Tĩnh tâm sau tiếng chuông: thở theo vòng tròn, có thể bỏ qua.
+let stillTimer = null;
+function stillness(onDone) {
+  setMode("listen");
+  const started = Date.now();
+  show(`
+    <p class="eyebrow">Tĩnh tâm</p>
+    <div class="breath"></div>
+    <h2 id="phase">Hít vào</h2>
+    <p class="muted">Thở theo vòng tròn: nở ra thì hít vào, thu lại thì thở ra.</p>
+    <p class="muted" id="left"></p>
+    <button class="link" id="skip">Bỏ qua</button>`, "center still");
+  const finish = () => { clearInterval(stillTimer); stillTimer = null; hide(); onDone(); };
+  const update = () => {
+    const elapsed = (Date.now() - started) / 1000;
+    if (elapsed >= STILL_SECONDS) return finish();
+    document.getElementById("phase").textContent = elapsed % BREATH_SECONDS < BREATH_SECONDS / 2 ? "Hít vào" : "Thở ra";
+    document.getElementById("left").textContent = `Còn ${Math.ceil(STILL_SECONDS - elapsed)} giây`;
+  };
+  clearInterval(stillTimer);
+  stillTimer = setInterval(update, 250);
+  update();
+  on("skip", finish);
 }
 
 async function enterAm() {
@@ -189,7 +215,12 @@ function intro() {
       : "<p>Trên đỉnh núi có một ngôi am. Thầy ở đó không trả lời hộ ai điều gì. Thầy chỉ hỏi, phần nghĩ là của con.</p>"}
     <p class="muted">Gõ chuông ở lưng núi, rồi lên am gặp thầy. Chừng năm phút. Nên bật tiếng.</p>
     <button class="btn" id="go">${world ? "Bắt đầu lên núi" : "Gặp thầy"}</button>`, "center");
-  on("go", () => (world ? walkMode() : (doneToday() ? donePanel() : start())));
+  on("go", () => {
+    if (world) return walkMode();
+    if (doneToday()) return donePanel();
+    bellSound(); // không có cảnh 3D thì vẫn nghe chuông và tĩnh tâm trước khi gặp thầy
+    stillness(() => { setMode("panel"); start(); });
+  });
 }
 
 function noWorldHome() {
