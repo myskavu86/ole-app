@@ -29,6 +29,19 @@
     return app.firstElementChild;
   };
 
+  // xác nhận bằng hai lần bấm (không dùng hộp thoại của trình duyệt)
+  function arm(btn, label) {
+    btn.dataset.armed = "1"; btn.dataset.label = btn.textContent; btn.textContent = label;
+    setTimeout(() => disarm(btn), 4000);
+  }
+  function disarm(btn) {
+    if (!btn.dataset.armed) return;
+    btn.textContent = btn.dataset.label; delete btn.dataset.armed;
+  }
+  function twoStep(btn, label, action) {
+    btn.onclick = () => (btn.dataset.armed ? action() : arm(btn, label));
+  }
+
   let audio;
   function ringBell() {
     try {
@@ -229,9 +242,7 @@
       </div>`);
     document.getElementById("home").onclick = home;
     const reset = document.getElementById("reset");
-    if (reset) reset.onclick = () => {
-      if (confirm("Xóa toàn bộ câu trả lời đã lưu trên máy này?")) { state = { done: [] }; save(); home(); }
-    };
+    if (reset) twoStep(reset, "Bấm lần nữa để xóa hết", () => { state = { done: [] }; save(); home(); });
   }
 
   // ---------- khởi động ----------
@@ -244,9 +255,10 @@
     c.style.animationDelay = `${Math.random() * 4}s`;
     stars.appendChild(c);
   }
-  document.getElementById("btnJournal").onclick = () => {
-    if (session && !confirm("Rời công án đang làm dở để xem sổ tay?")) return;
-    journal();
+  const btnJournal = document.getElementById("btnJournal");
+  btnJournal.onclick = () => {
+    if (!session || btnJournal.dataset.armed) { disarm(btnJournal); journal(); return; }
+    arm(btnJournal, "Bỏ dở công án?");
   };
   home();
 })();
