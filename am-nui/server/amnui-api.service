@@ -1,0 +1,15 @@
+[Unit]
+Description=Am Nui API (su thay va thong ke lua chon)
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/amnui
+EnvironmentFile=/etc/amnui.env
+Environment=AMNUI_DB=/var/lib/amnui/amnui.db
+ExecStart=/opt/amnui-venv/bin/python /var/www/amnui/server/server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

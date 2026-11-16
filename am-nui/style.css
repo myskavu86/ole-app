@@ -143,3 +143,7 @@ button { font: inherit; cursor: pointer; }
 .panel.still { background: none; border: none; backdrop-filter: none; text-shadow: 0 1px 10px #060a12, 0 0 3px #060a12; }
 .panel.still h2 { font-size: 1.5rem; margin-bottom: 6px; }
 textarea.copy { min-height: 110px; font-size: 0.85rem; margin-top: 10px; }
+.breath.small { width: 56px; height: 56px; margin: 14px auto; animation-duration: 4s; }
+.choice b { font-weight: 600; }
+.choice .muted { font-size: 0.85rem; }
+.stats b { color: #ffb347; font-size: 1.05rem; }

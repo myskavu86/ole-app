@@ -12,7 +12,13 @@ const STYLES = {
   nhu: { name: "Nhu", color: "#7ee0a1", dot: "🟢", note: "nhường để giữ hòa khí" },
   kheo: { name: "Khéo", color: "#8fc5ff", dot: "🔵", note: "tìm một lối khác" },
   tue: { name: "Phá vọng", color: "#ffd166", dot: "🟡", note: "soi ra chỗ sai" },
+  tu: { name: "Tự quyết", color: "#c9a7ff", dot: "🟣", note: "tự gỡ chuyện của chính mình" },
 };
+const STYLE_KEYS = ["thang", "nhu", "kheo", "tue", "tu"];
+const AI_TURNS = 2;      // số lượt thầy (AI) hỏi vặn trong một công án
+const OWN_TURNS = 3;     // và khi con mang chuyện của mình lên
+const MIN_OWN_STORY = 60;
+const OWN_CLOSE = "Một tuần nữa, con muốn kể với thầy rằng chuyện này đã đi tới đâu?";
 
 const app = document.getElementById("app");
 const hintEl = document.getElementById("hint");
@@ -29,7 +35,33 @@ try {
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* vẫn chơi được trong phiên này */ } };
 
 const doneToday = () => state.done.some((d) => d.date === today());
-const nextKoan = () => KOANS[state.done.length % KOANS.length];
+const nextKoan = () => KOANS[state.done.filter((d) => d.id !== "own").length % KOANS.length];
+const closeOf = (d) => (d.id === "own" ? OWN_CLOSE : byId[d.id]?.close ?? "");
+
+// ---------- máy chủ (không bắt buộc) ----------
+// Có máy chủ thì thầy đọc thật lời con và hiện được số người chọn mỗi đường.
+// Không có thì game vẫn chạy với câu hỏi soạn sẵn.
+const server = { online: false, ai: false };
+const serverReady = fetch("api/health")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((j) => { if (j && j.ok) { server.online = true; server.ai = !!j.ai; } })
+  .catch(() => {});
+
+async function postJson(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`${path} ${r.status}`);
+  return r.json();
+}
+const askMaster = (story, turns, mirror = false) => postJson("api/master", { story, turns, mirror }).then((j) => j.text);
+
+function clientId() {
+  if (!state.client) {
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
+    state.client = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    save();
+  }
+  return state.client;
+}
 let session = null; // công án đang làm dở
 let rung = doneToday(); // hôm nay đã gõ chuông chưa
 
@@ -210,8 +242,8 @@ function intro() {
   show(`
     <p class="eyebrow">${n ? `Ngày thứ ${n + (doneToday() ? 0 : 1)}` : "Chân núi"}</p>
     <h1>${n ? "Con lại lên núi." : "Mỗi ngày một công án."}</h1>
-    ${last && byId[last.id]
-      ? `<p class="muted">Lần trước thầy hỏi:</p><blockquote>${esc(byId[last.id].close)}</blockquote>`
+    ${last && closeOf(last)
+      ? `<p class="muted">Lần trước thầy hỏi:</p><blockquote>${esc(closeOf(last))}</blockquote>`
       : "<p>Trên đỉnh núi có một ngôi am. Thầy ở đó không trả lời hộ ai điều gì. Thầy chỉ hỏi, phần nghĩ là của con.</p>"}
     <p class="muted">Gõ chuông ở lưng núi, rồi lên am gặp thầy. Chừng năm phút. Nên bật tiếng.</p>
     <button class="btn" id="go">${world ? "Bắt đầu lên núi" : "Gặp thầy"}</button>`, "center");
@@ -244,10 +276,90 @@ function donePanel() {
   if (world) on("leave", leaveAm);
 }
 
-function start() {
+async function start() {
+  await serverReady;
+  if (!server.ai) return startKoan();
+  const panel = show(`
+    <p class="eyebrow">Trong am</p>
+    <h2>Hôm nay con lên núi vì điều gì?</h2>
+    <div class="choices">
+      <button class="choice" id="pickKoan"><b>Nhận công án của thầy</b><br><span class="muted">Một tình huống thầy đưa ra để con tập nghĩ.</span></button>
+      <button class="choice" id="pickOwn"><b>Mang chuyện của chính con lên</b><br><span class="muted">Một việc thật con đang vướng. Thầy không giải hộ, chỉ hỏi để con tự gỡ.</span></button>
+    </div>`);
+  panel.querySelector("#pickKoan").onclick = startKoan;
+  panel.querySelector("#pickOwn").onclick = ownStory;
+}
+
+function startKoan() {
   const koan = nextKoan();
-  session = { koan, date: today() };
+  session = { koan, date: today(), turns: [] };
   koan.type === "pha-vong" ? illusion() : situation();
+}
+
+// khung chờ trong lúc thầy đọc
+function waiting() {
+  show(`<p class="eyebrow">Thầy đang đọc lời con</p><div class="breath small"></div><p class="muted">Thầy im lặng một lúc.</p>`, "center");
+}
+const transcript = (turns) => turns.map((t) => (t.who === "con"
+  ? `<div class="mine"><b>Con thưa</b>${esc(t.text)}</div>`
+  : `<blockquote>${esc(t.text)}</blockquote>`)).join("");
+
+// --- mang chuyện của chính mình lên ---
+function ownStory() {
+  session = { own: true, date: today(), turns: [] };
+  show(`
+    <p class="eyebrow">Chuyện của con</p>
+    <p class="story">Con đang vướng chuyện gì? Kể cho thầy nghe: chuyện gì đang xảy ra, và con đang nghiêng về hướng nào.</p>
+    ${writingHtml("Viết như đang kể với một người con tin. Không cần hay, chỉ cần thật.")}
+    <p class="muted">Điều con viết được gửi tới máy chủ và mô hình AI để thầy đọc, không được lưu lại ở đó. Đừng ghi tên thật hay thông tin riêng tư của người khác.</p>`);
+  writingBox(MIN_OWN_STORY, "Thưa thầy", (text) => {
+    session.story = text;
+    session.turns.push({ who: "con", text });
+    ownAsk();
+  });
+}
+
+async function ownAsk() {
+  waiting();
+  let question;
+  try { question = await askMaster("Người chơi mang chuyện của chính mình lên hỏi thầy.", session.turns); }
+  catch { return ownBroken(); }
+  session.turns.push({ who: "thay", text: question });
+  const asked = session.turns.filter((t) => t.who === "thay").length;
+  show(`
+    <p class="eyebrow">Thầy hỏi · lượt ${asked}/${OWN_TURNS}</p>
+    ${transcript(session.turns.slice(-3))}
+    ${writingHtml("Đáp lời thầy.")}`);
+  writingBox(MIN_REPLY, "Thưa thầy", (text) => {
+    session.turns.push({ who: "con", text });
+    asked < OWN_TURNS ? ownAsk() : ownDecide();
+  });
+}
+
+function ownBroken() {
+  show(`
+    <p class="eyebrow">Thầy im lặng</p>
+    <p>Lúc này thầy chưa đáp được. Con có thể tự viết tiếp điều mình sẽ làm, hoặc quay lại sau.</p>
+    <div class="row"><button class="link" id="back">Nhận công án của thầy</button><button class="btn" id="go">Tự viết tiếp</button></div>`);
+  on("back", startKoan);
+  on("go", ownDecide);
+}
+
+function ownDecide() {
+  show(`
+    <p class="eyebrow">Phần của con</p>
+    <h2>Vậy con sẽ làm gì?</h2>
+    <p class="muted">Thầy không quyết hộ. Viết ra điều con chọn và lý do, bằng lời của con.</p>
+    ${writingHtml("Điều con sẽ làm, và vì sao.")}`);
+  writingBox(MIN_ANSWER, "Con đã quyết", async (text) => {
+    session.answer = text;
+    waiting();
+    try {
+      session.mirror = await askMaster("Người chơi mang chuyện của chính mình lên hỏi thầy.",
+        [...session.turns, ...(session.turns.at(-1).who === "con" ? [{ who: "thay", text: "Vậy con sẽ làm gì?" }] : []), { who: "con", text }], true);
+    } catch { session.mirror = null; }
+    closing();
+  });
 }
 
 // --- công án tình huống ---
@@ -257,17 +369,36 @@ function situation() {
     <p class="eyebrow">Công án · ${esc(koan.title)}</p>
     <p class="story">${esc(koan.story)}</p>
     ${writingHtml("Con sẽ làm gì, và vì sao? Viết bằng lời của con.")}`);
-  writingBox(MIN_ANSWER, "Trình thầy", (text) => { session.answer = text; masterAsks(); });
+  writingBox(MIN_ANSWER, "Trình thầy", (text) => {
+    session.answer = text;
+    session.turns.push({ who: "con", text });
+    masterAsks();
+  });
 }
 
-function masterAsks() {
-  const { koan, answer } = session;
+// Thầy hỏi vặn. Có AI thì thầy đọc đúng lời con và hỏi AI_TURNS lượt;
+// không có (hoặc AI lỗi) thì dùng câu hỏi soạn sẵn của công án, một lượt.
+async function masterAsks() {
+  const { koan } = session;
+  await serverReady;
+  let question = null, scripted = !server.ai || session.scripted;
+  if (!scripted) {
+    waiting();
+    try { question = await askMaster(koan.story, session.turns); }
+    catch { scripted = session.scripted = true; }
+  }
+  if (scripted) question = koan.ask;
+  session.turns.push({ who: "thay", text: question });
+  const asked = session.turns.filter((t) => t.who === "thay").length;
+  const last = scripted || asked >= AI_TURNS;
   show(`
-    <p class="eyebrow">Thầy hỏi lại</p>
-    <div class="mine"><b>Con đã thưa</b>${esc(answer)}</div>
-    <blockquote>${esc(koan.ask)}</blockquote>
+    <p class="eyebrow">Thầy hỏi lại${scripted ? "" : ` · lượt ${asked}/${AI_TURNS}`}</p>
+    ${transcript(session.turns.slice(-2))}
     ${writingHtml("Nghĩ thêm một lượt rồi đáp lời thầy.")}`);
-  writingBox(MIN_REPLY, "Thưa thầy", (text) => { session.reply = text; choosePath(); });
+  writingBox(MIN_REPLY, "Thưa thầy", (text) => {
+    session.turns.push({ who: "con", text });
+    last ? choosePath() : masterAsks();
+  });
 }
 
 function choosePath() {
@@ -299,15 +430,29 @@ function twist() {
   });
 }
 
-function karma() {
+// "62% người lên núi cũng đi đường này": chỉ hiện khi máy chủ có số liệu
+function statsLine(stats, path) {
+  if (!stats || !stats.total) return "";
+  if (stats.total < 5) return `<p class="muted stats">Con là một trong ${stats.total} người đầu tiên đáp công án này.</p>`;
+  const pct = Math.round((stats.counts[path] / stats.total) * 100);
+  const moved = Math.round((stats.changed / stats.total) * 100);
+  return `<p class="muted stats"><b>${pct}%</b> trong ${stats.total} người lên núi cũng đi đường này. ${moved}% đã đổi đường sau khi nghe thầy nói thêm.</p>`;
+}
+
+async function karma() {
   const { koan, path, changed } = session;
   const p = koan.paths[path];
+  let stats = null;
+  if (server.online) {
+    try { stats = await postJson("api/choice", { koan: koan.id, client: clientId(), path, changed }); } catch { /* không có số liệu thì thôi */ }
+  }
   show(`
     <p class="eyebrow">Nhân quả · ${changed ? "đường mới" : "đường đã giữ"}</p>
     <h2>${esc(p.label)}</h2>
     <div class="beat"><h3>Trước mắt</h3><p>${esc(p.now)}</p></div>
     <div class="beat"><h3>Về sau</h3><p>${esc(p.later)}</p></div>
     <div class="late">
+      ${statsLine(stats, path)}
       <p class="muted">Đây là một diễn biến có thể xảy ra, không phải lời phán đúng sai.</p>
       <div class="row"><span></span><button class="btn" id="next">Nghe lời thầy</button></div>
     </div>`);
@@ -338,19 +483,22 @@ function reveal() {
 
 // --- kết thúc ngày ---
 function closing() {
-  const { koan } = session;
-  const style = koan.type === "pha-vong" ? "tue" : koan.paths[session.path].style;
-  state.done.push({
-    id: koan.id, date: session.date, answer: session.answer, style,
-    reply: session.reply || null, path: session.path ?? null,
+  const { koan, own } = session;
+  const style = own ? "tu" : koan.type === "pha-vong" ? "tue" : koan.paths[session.path].style;
+  const entry = {
+    id: own ? "own" : koan.id, date: session.date, answer: session.answer, style,
+    turns: session.turns, path: session.path ?? null,
     changed: session.changed || false, found: session.found ?? null,
-  });
+  };
+  state.done.push(entry);
   save();
+  const mirror = session.mirror;
   session = null;
   const s = STYLES[style];
   show(`
     <p class="eyebrow">Mang theo xuống núi</p>
-    <blockquote>${esc(koan.close)}</blockquote>
+    ${mirror ? `<p>${esc(mirror)}</p>` : ""}
+    <blockquote>${esc(closeOf(entry))}</blockquote>
     <p>Câu này con không cần trả lời ngay.</p>
     <p class="muted">Ngọn đèn hôm nay mang lửa <b style="color:${s.color}">${s.name}</b> (${s.note}).</p>
     <div class="row"><span></span><button class="btn" id="light">Thắp đèn</button></div>`);
@@ -372,7 +520,7 @@ async function lightLantern() {
 
 // ---------- thẻ chia sẻ ----------
 function tally() {
-  const t = { thang: 0, nhu: 0, kheo: 0, tue: 0 };
+  const t = Object.fromEntries(STYLE_KEYS.map((k) => [k, 0]));
   state.done.forEach((d) => { t[d.style] = (t[d.style] || 0) + 1; });
   return t;
 }
@@ -429,10 +577,10 @@ function drawCard() {
 
   const last = state.done[state.done.length - 1];
   g.font = `italic 30px ${serif}`;
-  let y = wrapText(g, `“${byId[last.id].close}”`, W / 2, 750, 620, 42);
+  let y = wrapText(g, `“${closeOf(last)}”`, W / 2, 750, 620, 42);
   const t = tally();
-  g.font = `24px ${serif}`; g.fillStyle = "#b9b3a4";
-  g.fillText(["thang", "nhu", "kheo", "tue"].map((k) => `${STYLES[k].name} ${t[k]}`).join("  ·  "), W / 2, Math.max(y + 16, 900));
+  g.font = `22px ${serif}`; g.fillStyle = "#b9b3a4";
+  g.fillText(STYLE_KEYS.map((k) => `${STYLES[k].name} ${t[k]}`).join("  ·  "), W / 2, Math.max(y + 16, 900));
   g.font = `20px ${serif}`; g.fillStyle = "#8d8778";
   g.fillText("Mỗi ngày một công án. Không ai nghĩ hộ bạn.", W / 2, 938);
   return c.toDataURL("image/png");
@@ -444,8 +592,8 @@ function shareText() {
   return [
     `Am Núi · Ngày thứ ${state.done.length}`,
     lamps,
-    ["thang", "nhu", "kheo", "tue"].map((k) => `${STYLES[k].name} ${t[k]}`).join(" · "),
-    `Hôm nay thầy hỏi tôi: “${byId[last.id].close}”`,
+    STYLE_KEYS.map((k) => `${STYLES[k].name} ${t[k]}`).join(" · "),
+    `Hôm nay thầy hỏi tôi: “${closeOf(last)}”`,
     "Còn bạn sẽ đáp sao?",
   ].join("\n");
 }
@@ -457,7 +605,7 @@ function shareCard() {
     <p class="eyebrow">Thẻ hôm nay</p>
     <img class="card" alt="Thẻ kết quả: ngọn núi với các đèn đã thắp và câu hỏi của thầy" src="${drawCard()}">
     <div class="tally">
-      ${["thang", "nhu", "kheo", "tue"].map((k) => `<span><i style="background:${STYLES[k].color}"></i>${STYLES[k].name} ${t[k]}</span>`).join("")}
+      ${STYLE_KEYS.map((k) => `<span><i style="background:${STYLES[k].color}"></i>${STYLES[k].name} ${t[k]}</span>`).join("")}
       <span>Đổi đường ${changed} lần</span>
     </div>
     <p class="muted">Thẻ không chứa câu trả lời của con. Giữ ngón tay lên ảnh hoặc chụp màn hình để lưu.</p>
@@ -482,16 +630,19 @@ function shareCard() {
 function journal() {
   setMode("panel");
   const entries = state.done.slice().reverse().map((d) => {
-    const k = byId[d.id];
+    const own = d.id === "own", k = own ? { title: "Chuyện của con" } : byId[d.id];
     if (!k) return "";
-    const s = STYLES[d.style];
+    const s = STYLES[d.style] ?? STYLES.tue;
+    // bản lưu cũ chỉ có answer/reply; bản mới lưu cả cuộc vấn đáp
+    const talk = d.turns?.length ? transcript(d.turns)
+      : `<div class="mine"><b>Con thưa</b>${esc(d.answer)}</div>${d.reply ? `<div class="mine"><b>Con thưa</b>${esc(d.reply)}</div>` : ""}`;
     return `<div class="entry">
-      <p class="muted">${esc(d.date)} · ${k.type === "pha-vong" ? "Phá vọng" : "Công án"} · <span style="color:${s.color}">lửa ${s.name}</span></p>
+      <p class="muted">${esc(d.date)} · ${own ? "Chuyện của con" : k.type === "pha-vong" ? "Phá vọng" : "Công án"} · <span style="color:${s.color}">lửa ${s.name}</span></p>
       <h2>${esc(k.title)}</h2>
-      <div class="mine"><b>Con đã thưa</b>${esc(d.answer)}</div>
-      ${d.reply ? `<div class="mine"><b>Đáp lời thầy</b>${esc(d.reply)}</div>` : ""}
-      ${d.path !== null && k.paths ? `<p class="muted">Đường đã đi: ${esc(k.paths[d.path].label)}${d.changed ? " (đổi sau khi thầy nói thêm)" : ""}</p>` : ""}
-      ${d.found !== null ? `<p class="muted">Tự thấy ${d.found}/${k.flaws.length} chỗ chưa vững</p>` : ""}
+      ${talk}
+      ${own ? `<div class="mine"><b>Con đã quyết</b>${esc(d.answer)}</div>` : ""}
+      ${d.path != null && k.paths ? `<p class="muted">Đường đã đi: ${esc(k.paths[d.path].label)}${d.changed ? " (đổi sau khi thầy nói thêm)" : ""}</p>` : ""}
+      ${d.found != null ? `<p class="muted">Tự thấy ${d.found}/${k.flaws.length} chỗ chưa vững</p>` : ""}
     </div>`;
   }).join("");
   show(`
