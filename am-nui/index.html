@@ -6,63 +6,31 @@
   <title>Am Núi — mỗi ngày một công án</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <svg id="scene" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#0d1526"/>
-        <stop offset="0.6" stop-color="#22324a"/>
-        <stop offset="1" stop-color="#4a5568"/>
-      </linearGradient>
-      <radialGradient id="moonGlow">
-        <stop offset="0" stop-color="#f6ecc9" stop-opacity="0.55"/>
-        <stop offset="1" stop-color="#f6ecc9" stop-opacity="0"/>
-      </radialGradient>
-      <radialGradient id="lampGlow">
-        <stop offset="0" stop-color="#ffb347" stop-opacity="0.9"/>
-        <stop offset="1" stop-color="#ffb347" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <rect width="800" height="600" fill="url(#sky)"/>
-    <g id="stars" fill="#fff"></g>
-    <circle cx="640" cy="110" r="90" fill="url(#moonGlow)"/>
-    <circle cx="640" cy="110" r="34" fill="#f6ecc9"/>
-    <path d="M0 420 L120 300 L210 370 L330 250 L470 390 L560 320 L700 410 L800 350 L800 600 L0 600Z" fill="#1b2a3f"/>
-    <path d="M0 500 L150 440 L260 480 L400 410 L540 480 L660 450 L800 500 L800 600 L0 600Z" fill="#142033"/>
-    <!-- am -->
-    <g transform="translate(400 410)">
-      <circle id="amGlow" cx="0" cy="-4" r="60" fill="url(#lampGlow)" opacity="0.15"/>
-      <path d="M-46 -22 Q-30 -26 0 -48 Q30 -26 46 -22 L36 -18 L-36 -18Z" fill="#0b121d"/>
-      <rect x="-28" y="-18" width="56" height="26" fill="#0e1724"/>
-      <rect id="amWindow" x="-7" y="-10" width="14" height="18" fill="#ffb347" opacity="0.35"/>
-      <rect x="-34" y="8" width="68" height="4" fill="#0b121d"/>
-    </g>
-    <!-- bậc đá -->
-    <path d="M400 425 Q385 470 425 510 Q460 550 415 600" stroke="#2b3b54" stroke-width="7" fill="none" stroke-dasharray="3 9" stroke-linecap="round"/>
-    <!-- cây bồ đề -->
-    <g id="tree" transform="translate(290 475) scale(0.4)">
-      <path d="M0 0 Q-4 -40 2 -80" stroke="#0b121d" stroke-width="9" fill="none" stroke-linecap="round"/>
-      <path d="M0 -45 Q-22 -60 -34 -84 M2 -55 Q24 -68 32 -92" stroke="#0b121d" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <circle cx="0" cy="-112" r="46" fill="#1d3a34"/>
-      <circle cx="-38" cy="-92" r="30" fill="#1a332e"/>
-      <circle cx="38" cy="-96" r="32" fill="#214239"/>
-    </g>
-    <path d="M0 540 Q200 500 400 545 Q600 590 800 530 L800 600 L0 600Z" fill="#0b121d"/>
-  </svg>
+<body data-mode="panel">
+  <canvas id="world" aria-label="Ngọn núi và ngôi am"></canvas>
 
   <header>
     <div class="brand">Am Núi</div>
     <div class="hud">
-      <span id="lamps" title="Số đèn đã thắp"></span>
+      <span id="lamps" title="Đèn đã thắp"></span>
       <button id="btnJournal" class="link">Sổ tay</button>
     </div>
   </header>
 
+  <p id="hint" role="status"></p>
+
+  <div id="controls">
+    <button id="action" class="btn" hidden></button>
+    <div class="pads">
+      <button id="back" class="pad small" aria-label="Lùi lại">↓</button>
+      <button id="walk" class="pad" aria-label="Giữ để bước lên">Giữ để<br>bước</button>
+      <span class="pad small ghost"></span>
+    </div>
+  </div>
+
   <main id="app" aria-live="polite"></main>
 
-  <footer>Bản thử · câu trả lời chỉ lưu trên máy của bạn</footer>
-
   <script src="koans.js"></script>
-  <script src="game.js"></script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>
